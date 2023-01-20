@@ -1,0 +1,305 @@
+#Competitions, rounds and events in Poland
+SELECT  COUNT(distinct competitionId) AS competitions
+       ,COUNT(*)                      AS rounds
+       ,COUNT(distinct eventId)       AS events
+FROM
+(
+	SELECT  distinct concat(competitionId,eventId,roundTypeId)
+	       ,competitionId
+	       ,eventId
+	FROM Results r
+	INNER JOIN Competitions c
+	ON c.id = r.competitionId
+	WHERE c.countryId = 'Poland'
+	AND right(competitionId, 4) = 2022
+)a;
+
+#Record count
+SELECT  a.*
+       ,average+single AS all_records
+FROM
+(
+	SELECT  SUM(case WHEN regionalAverageRecord is not null THEN 1 else 0 end)                                                         AS average
+	       ,SUM(case WHEN regionalSingleRecord is not null THEN 1 else 0 end)                                                          AS single
+	       ,SUM(case WHEN regionalAverageRecord = 'NR' THEN 1 else 0 end)+SUM(case WHEN regionalSingleRecord = 'NR' THEN 1 else 0 end) AS NRs
+	       ,SUM(case WHEN regionalAverageRecord = 'ER' THEN 1 else 0 end)+SUM(case WHEN regionalSingleRecord = 'ER' THEN 1 else 0 end) AS ERs
+	       ,SUM(case WHEN regionalAverageRecord = 'WR' THEN 1 else 0 end)+SUM(case WHEN regionalSingleRecord = 'WR' THEN 1 else 0 end) AS WRs
+	FROM Results
+	WHERE countryId = 'Poland'
+	AND right(competitionId, 4) = '2022'
+)a;
+
+#NRs broken by event
+SELECT  a.*
+       ,single+average AS total
+FROM
+(
+	SELECT  eventId
+	       ,SUM(single)  AS single
+	       ,SUM(average) AS average
+	FROM
+	(
+		SELECT  eventId
+		       ,CASE WHEN regionalSingleRecord is not null THEN 1  ELSE 0 END  AS single
+		       ,CASE WHEN regionalAverageRecord is not null THEN 1  ELSE 0 END AS average
+		FROM Results
+		WHERE (regionalAverageRecord is not null or regionalSingleRecord is not null)
+		AND countryId = 'Poland'
+		AND right(competitionId, 4) = 2022
+	)a
+	GROUP BY  eventId
+)a
+ORDER BY 4 desc;
+
+#People by number of competitions in Poland in 2022
+SELECT  personId
+       ,COUNT(distinct competitionId)
+FROM
+(
+	SELECT  personId
+	       ,competitionId
+	FROM Results r
+	INNER JOIN Competitions c
+	ON c.id = r.competitionId
+	WHERE c.countryId = 'Poland'
+	AND right(competitionId, 4) = '2022'
+)a
+GROUP BY  personId
+ORDER BY 2 desc;
+
+#Countries Czechs competed in (+count,competitions)
+SELECT  countryId
+       ,COUNT(distinct personId)
+       ,COUNT(distinct competitionId)
+FROM
+(
+	SELECT  distinct personId
+	       ,c.countryId
+	       ,r.competitionId
+	FROM Results r
+	INNER JOIN Competitions c
+	ON c.id = r.competitionId
+	WHERE r.countryId = 'Poland'
+	AND right(competitionId, 4) = '2022'
+)a
+GROUP BY  countryId
+ORDER BY 2 desc;
+
+#Total number of competitions Czechs competed in
+SELECT  COUNT(distinct competitionId)
+FROM Results
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022';
+
+#Solves and attempts total
+SELECT  SUM(case WHEN value1 > 0 THEN 1 else 0 end)+ SUM(case WHEN value2 > 0 THEN 1 else 0 end)+ SUM(case WHEN value3 > 0 THEN 1 else 0 end)+ SUM(case WHEN value4 > 0 THEN 1 else 0 end)+ SUM(case WHEN value5 > 0 THEN 1 else 0 end) AS solves
+       ,SUM(case WHEN value1 != 0 AND value1 != -2 THEN 1 else 0 end)+ SUM(case WHEN value2 != 0 AND value2 != -2 THEN 1 else 0 end)+ SUM(case WHEN value3 != 0 AND value3 != -2 THEN 1 else 0 end)+ SUM(case WHEN value4 != 0 AND value4 != -2 THEN 1 else 0 end)+ SUM(case WHEN value5 != 0 AND value5 != -2 THEN 1 else 0 end) AS attempts
+FROM Results r
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022'
+ORDER BY solves desc, attempts desc;
+
+#Solves and attempts by event
+SELECT  eventId
+       ,SUM(case WHEN value1 > 0 THEN 1 else 0 end)+ SUM(case WHEN value2 > 0 THEN 1 else 0 end)+ SUM(case WHEN value3 > 0 THEN 1 else 0 end)+ SUM(case WHEN value4 > 0 THEN 1 else 0 end)+ SUM(case WHEN value5 > 0 THEN 1 else 0 end) AS solves
+       ,SUM(case WHEN value1 != 0 AND value1 != -2 THEN 1 else 0 end)+ SUM(case WHEN value2 != 0 AND value2 != -2 THEN 1 else 0 end)+ SUM(case WHEN value3 != 0 AND value3 != -2 THEN 1 else 0 end)+ SUM(case WHEN value4 != 0 AND value4 != -2 THEN 1 else 0 end)+ SUM(case WHEN value5 != 0 AND value5 != -2 THEN 1 else 0 end) AS attempts
+FROM Results r
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022'
+GROUP BY  eventId
+ORDER BY solves desc, attempts desc;
+
+#Number of Czechs that competed in 2022
+SELECT  COUNT(distinct personId)
+FROM Results
+WHERE right(competitionId, 4) = '2022'
+AND countryId = 'Poland';
+
+#Czechs by number of competitions they competed in in 2022
+SELECT  cnt
+       ,COUNT(personId) AS people
+FROM
+(
+	SELECT  personId
+	       ,COUNT(distinct competitionId) AS cnt
+	FROM
+	(
+		SELECT  personId
+		       ,competitionId
+		FROM Results r
+		INNER JOIN Competitions c
+		ON c.id = r.competitionId
+		WHERE r.countryId = 'Poland'
+		AND right(competitionId, 4) = '2022'
+	)a
+	GROUP BY  personId
+	ORDER BY 2 desc
+)a
+GROUP BY  cnt;
+
+#Number of competitions in 2022 for individual Czechs
+SELECT  personId
+       ,COUNT(distinct competitionId) AS cnt
+FROM
+(
+	SELECT  personId
+	       ,competitionId
+	FROM Results r
+	INNER JOIN Competitions c
+	ON c.id = r.competitionId
+	WHERE r.countryId = 'Poland'
+	AND right(competitionId, 4) = '2022'
+)a
+GROUP BY  personId
+ORDER BY 2 desc;
+
+#Solves/attempts by person
+SELECT  personId
+       ,SUM(case WHEN value1 > 0 THEN 1 else 0 end)+ SUM(case WHEN value2 > 0 THEN 1 else 0 end)+ SUM(case WHEN value3 > 0 THEN 1 else 0 end)+ SUM(case WHEN value4 > 0 THEN 1 else 0 end)+ SUM(case WHEN value5 > 0 THEN 1 else 0 end) AS solves
+       ,SUM(case WHEN value1 != 0 AND value1 != -2 THEN 1 else 0 end)+ SUM(case WHEN value2 != 0 AND value2 != -2 THEN 1 else 0 end)+ SUM(case WHEN value3 != 0 AND value3 != -2 THEN 1 else 0 end)+ SUM(case WHEN value4 != 0 AND value4 != -2 THEN 1 else 0 end)+ SUM(case WHEN value5 != 0 AND value5 != -2 THEN 1 else 0 end) AS attempts
+FROM Results r
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022'
+GROUP BY  personId
+ORDER BY solves desc, attempts desc;
+         
+#Number of people who shared comps with Czechs
+SELECT  COUNT(distinct b.personId)
+FROM
+(
+	SELECT  distinct personId
+	       ,competitionId
+	FROM Results
+	WHERE right(competitionId, 4) = '2022'
+	AND countryId = 'Poland' 
+)a
+INNER JOIN
+(
+	SELECT  distinct personId
+	       ,competitionId
+	       ,countryId
+	FROM Results
+)b
+ON b.personId != a.personId AND a.competitionId = b.competitionId;
+
+#How many people specific person met
+SELECT  a.personId
+       ,COUNT(distinct b.personId)
+FROM
+(
+	SELECT  distinct personId
+	       ,competitionId
+	FROM Results
+	WHERE right(competitionId, 4) = '2022'
+	AND countryId = 'Poland' 
+)a
+INNER JOIN
+(
+	SELECT  distinct personId
+	       ,competitionId
+	       ,countryId
+	FROM Results
+)b
+ON b.personId != a.personId AND a.competitionId = b.competitionId
+GROUP BY  a.personId
+ORDER BY 2 desc;
+
+#NR avg improvement
+SELECT  a.eventId                                                   AS event
+       ,a.current                                                   AS '2022'
+       ,a.last_year                                                 AS "<=2021"
+       ,concat(improvement_absolute," (",improvement_percent," %)") AS improvement
+FROM
+(
+	SELECT  a.*
+	       ,round((last_year-current)/100,2)         AS improvement_absolute
+	       ,round(100*(last_year-current)/current,2) AS improvement_percent
+	FROM
+	(
+		SELECT  eventId
+		       ,MIN(case WHEN right(competitionId)<=2022 THEN average end)    AS current
+		       ,MIN(case WHEN right(competitionId,4) < 2022 THEN average end) AS last_year
+		FROM Results
+		WHERE countryId = 'Poland'
+		AND regionalAverageRecord is not null
+		GROUP BY  eventId
+	)a
+)a
+WHERE current != last_year
+ORDER BY improvement_percent desc;
+
+#NR single improvement
+SELECT  a.eventId                                                   AS event
+       ,a.current                                                   AS '2022'
+       ,a.last_year                                                 AS "<=2021"
+       ,concat(improvement_absolute," (",improvement_percent," %)") AS improvement
+FROM
+(
+	SELECT  a.*
+	       ,round((last_year-current)/100,2)         AS improvement_absolute
+	       ,round(100*(last_year-current)/current,2) AS improvement_percent
+	FROM
+	(
+		SELECT  eventId
+		       ,MIN(case WHEN right(competitionId)<=2022 THEN best end)      AS current
+		       ,MIN(case WHEN right(competitionId,4) < 2022 THEN best end) AS last_year
+		FROM Results
+		WHERE countryId = 'Poland'
+		AND regionalSingleRecord is not null
+		GROUP BY  eventId
+	)a
+)a
+WHERE current != last_year
+ORDER BY improvement_percent desc;
+
+#DNF, DNS per person
+SELECT  personId
+       ,SUM(case WHEN value1 = -1 THEN 1 else 0 end)+ SUM(case WHEN value2 = -1 THEN 1 else 0 end)+ SUM(case WHEN value3 = -1 THEN 1 else 0 end)+ SUM(case WHEN value4 = -1 THEN 1 else 0 end)+ SUM(case WHEN value5 = -1 THEN 1 else 0 end) AS DNF
+       ,SUM(case WHEN value1 = -2 THEN 1 else 0 end)+ SUM(case WHEN value2 = -2 THEN 1 else 0 end)+ SUM(case WHEN value3 = -2 THEN 1 else 0 end)+ SUM(case WHEN value4 = -2 THEN 1 else 0 end)+ SUM(case WHEN value5 = -2 THEN 1 else 0 end) AS DNS
+FROM Results
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022'
+GROUP BY  personId
+ORDER BY 2 desc;
+
+#DNF, DNS total
+SELECT  SUM(case WHEN value1 = -1 THEN 1 else 0 end)+ SUM(case WHEN value2 = -1 THEN 1 else 0 end)+ SUM(case WHEN value3 = -1 THEN 1 else 0 end)+ SUM(case WHEN value4 = -1 THEN 1 else 0 end)+ SUM(case WHEN value5 = -1 THEN 1 else 0 end) AS DNF
+       ,SUM(case WHEN value1 = -2 THEN 1 else 0 end)+ SUM(case WHEN value2 = -2 THEN 1 else 0 end)+ SUM(case WHEN value3 = -2 THEN 1 else 0 end)+ SUM(case WHEN value4 = -2 THEN 1 else 0 end)+ SUM(case WHEN value5 = -2 THEN 1 else 0 end) AS DNS
+FROM Results
+WHERE countryId = 'Poland'
+AND right(competitionId, 4) = '2022';
+
+#People without DNF/DNS
+SELECT  COUNT(case WHEN DNF+DNS = 0 THEN 1 end)
+FROM
+(
+	SELECT  personId
+	       ,SUM(case WHEN value1 = -1 THEN 1 else 0 end)+ SUM(case WHEN value2 = -1 THEN 1 else 0 end)+ SUM(case WHEN value3 = -1 THEN 1 else 0 end)+ SUM(case WHEN value4 = -1 THEN 1 else 0 end)+ SUM(case WHEN value5 = -1 THEN 1 else 0 end) AS DNF
+	       ,SUM(case WHEN value1 = -2 THEN 1 else 0 end)+ SUM(case WHEN value2 = -2 THEN 1 else 0 end)+ SUM(case WHEN value3 = -2 THEN 1 else 0 end)+ SUM(case WHEN value4 = -2 THEN 1 else 0 end)+ SUM(case WHEN value5 = -2 THEN 1 else 0 end) AS DNS
+	FROM Results
+	WHERE countryId = 'Poland'
+	AND right(competitionId, 4) = '2022'
+	GROUP BY  personId
+)a;
+
+#Foreigners by number of Poles met
+SELECT  a.personId
+       ,COUNT(distinct b.personId)
+FROM
+(
+	SELECT  distinct personId
+	       ,competitionId
+	FROM Results
+	WHERE right(competitionId, 4) = '2022'
+	AND countryId = 'Poland' 
+)b
+INNER JOIN
+(
+	SELECT  distinct personId
+	       ,competitionId
+	FROM Results
+	WHERE countryId != 'Poland'
+)a
+ON a.competitionId = b.competitionId
+GROUP BY  a.personId
+ORDER BY 2 desc;
